@@ -1,11 +1,13 @@
-$pipeName = "TDE_TEST_PIPE"
-$namedPipes = Get-WmiObject -Query "SELECT * FROM Win32_NamedPipe"
-$pipe = $namedPipes | Where-Object { $_.Name -eq "\\.\pipe\$pipeName" }
+# List all named pipes
+$namedPipes = Get-ChildItem -Path \\.\pipe\
+
+# Filter and find the named pipe
+$pipe = $namedPipes | Where-Object { $_.Name -eq "TDE_TEST_PIPE" }
+
+# Check if the named pipe is found and output the details
 if ($pipe) {
-    Write-Host "Named pipe '$pipeName' found:"
+    Write-Host "Named pipe 'TDE_TEST_PIPE' found:"
     Write-Host "Name: $($pipe.Name)"
-    Write-Host "Description: $($pipe.Description)"
-    Write-Host "Caption: $($pipe.Caption)"
 } else {
-    Write-Host "Named pipe '$pipeName' not found."
+    Write-Host "Named pipe 'TDE_TEST_PIPE' not found."
 }
