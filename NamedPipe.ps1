@@ -1,7 +1,6 @@
 # Main script execution parameters
 param (
-    [string]$mode,
-    [string]$message
+    [string]$mode
 )
 
 # Define the name of the pipe
@@ -18,9 +17,7 @@ function Create-NamedPipe {
         4096, 
         4096
     )
-    Write-Host "Waiting for client connection..."
-    $pipe.WaitForConnection()
-    Write-Host "Client connected."
+    Write-Host "Named pipe created: $pipeName"
     return $pipe
 }
 
@@ -29,59 +26,71 @@ function Write-ToPipe {
         [string]$message
     )
 
-    Write-Host "Connecting to named pipe: $pipeName"
     $pipeClient = New-Object System.IO.Pipes.NamedPipeClientStream(".", "TDE_TEST_PIPE", [System.IO.Pipes.PipeDirection]::Out)
     $pipeClient.Connect()
-    Write-Host "Connected to named pipe."
-
     $streamWriter = New-Object System.IO.StreamWriter($pipeClient)
     $streamWriter.AutoFlush = $true
     Write-Host "Writing message to pipe: $message"
     $streamWriter.WriteLine($message)
+    $streamWriter.Flush()
     $streamWriter.Close()
     $pipeClient.Close()
-    Write-Host "Message written and pipe closed."
 }
 
 function Read-FromPipe {
-    $pipe = Create-NamedPipe
-
-    $streamReader = New-Object System.IO.StreamReader($pipe)
     while ($true) {
-        $message = $streamReader.ReadLine()
-        if ($message -ne $null) {
-            Write-Host "Received: $message"
-        } else {
-            break
+        $pipe = Create-NamedPipe
+        $pipe.WaitForConnection()
+
+        $streamReader = New-Object System.IO.StreamReader($pipe)
+        while ($true) {
+            try {
+                $message = $streamReader.ReadLine()
+                if ($message -ne $null) {
+                    Write-Host "Received: $message"
+                } else {
+                    break
+                }
+            } catch {
+                Write-Host "Error reading from pipe: $_"
+                break
+            }
         }
+        $streamReader.Close()
+        $pipe.Close()
+        Start-Sleep -Milliseconds 100
     }
-    $streamReader.Close()
-    $pipe.Close()
-    Write-Host "Pipe closed."
 }
 
 function Find-NamedPipe {
-    $namedPipes = Get-ChildItem -Path \\.\pipe\
-    $pipe = $namedPipes | Where-Object { $_.Name -eq "TDE_TEST_PIPE" }
+    while ($true) {
+        $namedPipes = Get-ChildItem -Path \\.\pipe\
+        $pipe = $namedPipes | Where-Object { $_.Name -eq "TDE_TEST_PIPE" }
 
-    if ($pipe) {
-        Write-Host "Named pipe 'TDE_TEST_PIPE' found:"
-        Write-Host "Name: $($pipe.Name)"
-    } else {
-        Write-Host "Named pipe 'TDE_TEST_PIPE' not found."
+        if ($pipe) {
+            Write-Host "Named pipe 'TDE_TEST_PIPE' found:"
+            Write-Host "Name: $($pipe.Name)"
+        } else {
+            Write-Host "Named pipe 'TDE_TEST_PIPE' not found."
+        }
+        Start-Sleep -Seconds 5
+    }
+}
+
+function Start-Writer {
+    while ($true) {
+        $message = Read-Host "Enter your message"
+        if ($message -ne $null -and $message.Trim() -ne '') {
+            Write-ToPipe -message $message
+        }
     }
 }
 
 if ($mode -eq "read") {
-    Find-NamedPipe
+    Start-Job -ScriptBlock { Find-NamedPipe }
     Read-FromPipe
-    Find-NamedPipe
 } elseif ($mode -eq "write") {
-    if ($message -eq $null) {
-        Write-Host "Usage: .\NamedPipe.ps1 -mode write -message <your_message>"
-        exit
-    }
-    Write-ToPipe -message $message
+    Start-Writer
 } else {
-    Write-Host "Usage: .\NamedPipe.ps1 -mode <read|write> [-message <your_message>]"
+    Write-Host "Usage: .\NamedPipe.ps1 -mode <read|write>"
 }
