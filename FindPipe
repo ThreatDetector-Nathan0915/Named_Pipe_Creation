@@ -1,0 +1,11 @@
+$pipeName = "TDE_TEST_PIPE"
+$namedPipes = Get-WmiObject -Query "SELECT * FROM Win32_NamedPipe"
+$pipe = $namedPipes | Where-Object { $_.Name -eq "\\.\pipe\$pipeName" }
+if ($pipe) {
+    Write-Host "Named pipe '$pipeName' found:"
+    Write-Host "Name: $($pipe.Name)"
+    Write-Host "Description: $($pipe.Description)"
+    Write-Host "Caption: $($pipe.Caption)"
+} else {
+    Write-Host "Named pipe '$pipeName' not found."
+}
