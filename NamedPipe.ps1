@@ -60,8 +60,22 @@ function Read-FromPipe {
     Write-Host "Pipe closed."
 }
 
+function Find-NamedPipe {
+    $namedPipes = Get-ChildItem -Path \\.\pipe\
+    $pipe = $namedPipes | Where-Object { $_.Name -eq "TDE_TEST_PIPE" }
+
+    if ($pipe) {
+        Write-Host "Named pipe 'TDE_TEST_PIPE' found:"
+        Write-Host "Name: $($pipe.Name)"
+    } else {
+        Write-Host "Named pipe 'TDE_TEST_PIPE' not found."
+    }
+}
+
 if ($mode -eq "read") {
+    Find-NamedPipe
     Read-FromPipe
+    Find-NamedPipe
 } elseif ($mode -eq "write") {
     if ($message -eq $null) {
         Write-Host "Usage: .\NamedPipe.ps1 -mode write -message <your_message>"
