@@ -1,4 +1,3 @@
-Enumerating Named Pipes on a host.
 # PowerShell Named Pipe Exploitation Scripts
 
 This repository contains PowerShell scripts and a batch file designed to interact with and exploit named pipes for inter-process communication (IPC). Named pipes can be a vector for security vulnerabilities if not properly secured. These scripts demonstrate how to find, interact with, and potentially exploit named pipes.
